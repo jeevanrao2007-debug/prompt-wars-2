@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matdata Sahayak</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="dashboard-shell">
+        <header class="hero">
+            <div>
+                <p class="eyebrow">Election Process Education Assistant</p>
+                <h1>Matdata Sahayak</h1>
+                <p class="subtitle">Smart Election Guidance System</p>
+            </div>
+            <div class="hero-actions">
+                <div class="gemini-badge">
+                    <img src="https://www.gstatic.com/lamda/images/gemini_sparkle_v2.svg" alt="" aria-hidden="true">
+                    <span>Powered by Gemini</span>
+                </div>
+                <span id="stageBadge" class="stage-badge" role="status" aria-live="polite">Not evaluated</span>
+            </div>
+        </header>
+
+        <section class="bento-grid">
+            <form id="profileForm" class="glass-card profile-card">
+                <div class="card-heading">
+                    <p class="eyebrow">Citizen Profile</p>
+                    <h2>User Profile</h2>
+                </div>
+
+                <div class="form-row">
+                    <label for="age">Age</label>
+                    <input id="age" name="age" type="number" min="0" max="120" value="18" required>
+                </div>
+
+                <div class="form-row">
+                    <label for="state">State</label>
+                    <select id="state" name="state" required></select>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label for="registered">Registered</label>
+                        <select id="registered" name="registered">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="verified">Verified</label>
+                        <select id="verified" name="verified">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="evaluateBtn" class="primary-action" type="submit">Evaluate readiness</button>
+            </form>
+
+            <section class="glass-card readiness-card">
+                <div class="card-heading">
+                    <p class="eyebrow">Readiness Signal</p>
+                    <h2>Readiness Score</h2>
+                </div>
+
+                <div class="score-orbit" role="img" aria-label="Readiness score">
+                    <div class="score-core">
+                        <strong id="scoreText" aria-live="polite">0%</strong>
+                        <span id="stageText">Not evaluated</span>
+                    </div>
+                </div>
+
+                <div class="progress-track" role="progressbar" aria-label="Readiness progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+
+                <p id="scoreActionHint" class="score-action-hint" aria-live="polite">Complete the form to see your highest-impact next action.</p>
+
+                <ul id="checklist" class="checklist" aria-live="polite">
+                    <li>Complete the form to begin.</li>
+                </ul>
+            </section>
+
+            <section class="glass-card timeline-card">
+                <div class="card-heading">
+                    <p class="eyebrow">Process Tracker</p>
+                    <h2>Timeline</h2>
+                </div>
+
+                <div id="timeline" class="timeline" aria-label="Election process timeline">
+                    <button type="button" data-step="registration" data-query="How do I register as a voter?" aria-label="Ask about voter registration">
+                        <span>01</span>
+                        Register
+                    </button>
+                    <button type="button" data-step="verification" data-query="How can I verify my voter registration status?" aria-label="Ask about voter verification">
+                        <span>02</span>
+                        Verify
+                    </button>
+                    <button type="button" data-step="booth" data-query="How do I find my polling booth?" aria-label="Ask about finding a polling booth">
+                        <span>03</span>
+                        Booth
+                    </button>
+                    <button type="button" data-step="ready_to_vote" data-query="What should I carry on voting day?" aria-label="Ask about voting day preparation">
+                        <span>04</span>
+                        Vote
+                    </button>
+                    <button type="button" data-step="results" data-query="Where can I check election results?" aria-label="Ask about election results">
+                        <span>05</span>
+                        Results
+                    </button>
+                </div>
+            </section>
+
+            <section class="glass-card map-card">
+                <div class="map-header">
+                    <div class="card-heading">
+                        <p class="eyebrow">Location Intelligence</p>
+                        <h2>Polling Booth Locator</h2>
+                    </div>
+                    <button id="locateBtn" class="ghost-action" type="button" aria-label="Use current location for polling booth search">Use my location</button>
+                </div>
+                <iframe id="mapFrame" title="Polling booth map" loading="lazy"></iframe>
+            </section>
+
+            <section class="glass-card chat-card">
+                <header class="chat-header">
+                    <div class="card-heading">
+                        <p class="eyebrow">Guidance Console</p>
+                        <h2>Assistant</h2>
+                    </div>
+                </header>
+
+                <div id="suggestions" class="suggestions" aria-label="Suggested questions">
+                    <button type="button">Am I eligible to vote?</button>
+                    <button type="button">How do I apply with Form 6?</button>
+                    <button type="button">How do I check my EPIC status?</button>
+                </div>
+
+                <div id="chatMessages" class="chat-messages" role="log" aria-live="polite">
+                    <div class="message bot">
+                        <span class="ai-label">AI Guidance</span>
+                        Namaste. Share your voter details, then ask me about registration, verification, booth lookup, or voting day.
+                    </div>
+                </div>
+
+                <div id="typingIndicator" class="typing-indicator" role="status" aria-live="polite" aria-label="Assistant is typing" hidden>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <section id="sessionSummary" class="session-summary" aria-live="polite" aria-label="Firebase session summary">
+                    <h3>Firebase Session Summary</h3>
+                    <p id="summaryMeta">No session yet. Evaluate profile to start a demo session.</p>
+                    <ul id="summaryInteractions">
+                        <li>Interactions will appear here during the demo.</li>
+                    </ul>
+                </section>
+
+                <div id="appStatus" class="sr-only" role="status" aria-live="polite"></div>
+
+                <form id="chatForm" class="chat-form">
+                    <label class="sr-only" for="chatInput">Ask Matdata Sahayak a question</label>
+                    <input id="chatInput" type="text" placeholder="Ask a question..." autocomplete="off" maxlength="1000" required aria-label="Ask Matdata Sahayak a question">
+                    <button class="primary-action" type="submit">Send</button>
+                </form>
+            </section>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Built with <strong>Google Cloud</strong>: Cloud Run • Firestore • Firebase • Gemini Pro</p>
+    </footer>
+
+    <script src="/config.js"></script>
+    <script src="/maps.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>

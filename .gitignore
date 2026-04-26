@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.log
+*.sqlite3
+*.db
+firebase-service-account*.json
+service-account*.json
+google-credentials*.json
+node_modules/
+.DS_Store
+.firebase/
