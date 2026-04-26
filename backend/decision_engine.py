@@ -2,11 +2,22 @@ from typing import Any
 
 
 def determine_stage(user_profile: Any) -> dict[str, Any]:
-    """Determine the user's election stage, readiness score, checklist, and next steps."""
+    """
+    Evaluate voter readiness based on profile and determine the election stage.
+
+    Args:
+        user_profile (Any): Contains age, registration, and verification status.
+
+    Returns:
+        dict[str, Any]: Stage classification, readiness score, and checklist.
+    """
+    # Extract profile attributes
     age = user_profile.age
     registered = user_profile.registered
     verified = user_profile.verified
 
+    # Deterministic logic for stage classification
+    # This ensures legal correctness and explainability
     if age < 18:
         stage = "ineligible"
     elif not registered:
@@ -16,6 +27,7 @@ def determine_stage(user_profile: Any) -> dict[str, Any]:
     else:
         stage = "ready_to_vote"
 
+    # Calculate readiness score based on milestone completion
     readiness_score = 0
     if age >= 18:
         readiness_score += 30
@@ -24,12 +36,14 @@ def determine_stage(user_profile: Any) -> dict[str, Any]:
     if verified:
         readiness_score += 40
 
+    # Build readiness checklist for UI display
     checklist = [
         "[OK] Eligible" if age >= 18 else "[NO] Eligible",
         "[OK] Registered" if registered else "[NO] Registered",
         "[OK] Verified" if verified else "[NO] Verified",
     ]
 
+    # Map stages to specific recommended next steps
     next_steps_map = {
         "ineligible": ["Wait until you turn 18", "Prepare documents"],
         "registration": ["Fill Form 6 on voters.eci.gov.in"],

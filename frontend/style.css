@@ -127,9 +127,17 @@ select:focus-visible {
 }
 
 .subtitle {
-    margin: 10px 0 0;
+    font-size: 1.1rem;
     color: var(--soft);
-    font-size: 18px;
+    margin: 10px 0 0;
+}
+
+.google-signal {
+    font-size: 0.85rem;
+    color: var(--cyan);
+    font-weight: 500;
+    opacity: 0.9;
+    margin-top: 6px;
 }
 
 .eyebrow {

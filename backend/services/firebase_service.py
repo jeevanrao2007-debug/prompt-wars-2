@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
 
+# Firestore structure:
+# sessions/{session_id}
+# └── interactions/{interaction_id}
+# This layered approach ensures clean session isolation and traceability of user interactions.
+
 try:
     import firebase_admin
     from firebase_admin import credentials, firestore
@@ -22,7 +27,12 @@ _init_lock = Lock()
 
 
 def _get_firestore_client() -> Any | None:
-    """Initialize and return a shared Firestore client from environment configuration."""
+    """
+    Initialize and return a shared Firestore client from environment configuration.
+
+    Returns:
+        Any | None: Initialized Firestore client or None if unavailable.
+    """
     global _db_client, _init_error
 
     if _db_client is not None:
@@ -59,24 +69,53 @@ def _get_firestore_client() -> Any | None:
 
 
 def _utc_now() -> datetime:
-    """Return the current UTC timestamp."""
+    """
+    Return the current UTC timestamp.
+
+    Returns:
+        datetime: Current UTC datetime.
+    """
     return datetime.now(timezone.utc)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
-    """Return value if it is a dictionary, otherwise return an empty dictionary."""
+    """
+    Return value if it is a dictionary, otherwise return an empty dictionary.
+
+    Args:
+        value (Any): Input value.
+
+    Returns:
+        dict[str, Any]: Dictionary representation of the input.
+    """
     return value if isinstance(value, dict) else {}
 
 
 def _as_string(value: Any) -> str:
-    """Return value as a safe string for Firestore writes."""
+    """
+    Return value as a safe string for Firestore writes.
+
+    Args:
+        value (Any): Input value.
+
+    Returns:
+        str: String representation of the input.
+    """
     if value is None:
         return ""
     return str(value)
 
 
 def _normalize_user_profile(data: Any) -> dict[str, Any]:
-    """Build a valid user profile payload for a session document."""
+    """
+    Build a valid user profile payload for a session document.
+
+    Args:
+        data (Any): Input data containing user profile details.
+
+    Returns:
+        dict[str, Any]: Normalized user profile.
+    """
     payload = _as_dict(data)
     user_profile = _as_dict(payload.get("user_profile") or payload.get("user"))
 
@@ -89,7 +128,15 @@ def _normalize_user_profile(data: Any) -> dict[str, Any]:
 
 
 def _normalize_interaction(data: Any) -> dict[str, Any]:
-    """Build a valid interaction payload for an interaction document."""
+    """
+    Build a valid interaction payload for an interaction document.
+
+    Args:
+        data (Any): Input data containing interaction details.
+
+    Returns:
+        dict[str, Any]: Normalized interaction record.
+    """
     payload = _as_dict(data)
 
     return {
@@ -101,7 +148,15 @@ def _normalize_interaction(data: Any) -> dict[str, Any]:
 
 
 def _to_iso_timestamp(value: Any) -> str | None:
-    """Normalize datetime-like values to ISO strings for API responses."""
+    """
+    Normalize datetime-like values to ISO strings for API responses.
+
+    Args:
+        value (Any): Input value (expected datetime).
+
+    Returns:
+        str | None: ISO format timestamp or None.
+    """
     if hasattr(value, "isoformat"):
         try:
             return value.isoformat()
@@ -111,7 +166,15 @@ def _to_iso_timestamp(value: Any) -> str | None:
 
 
 def _build_summary_base(session_id: Any) -> dict[str, Any]:
-    """Return the shared shape used by the session summary endpoint."""
+    """
+    Return the shared shape used by the session summary endpoint.
+
+    Args:
+        session_id (Any): The ID of the session.
+
+    Returns:
+        dict[str, Any]: Initial summary structure.
+    """
     return {
         "session_id": _as_string(session_id),
         "source": "unavailable",
@@ -124,7 +187,15 @@ def _build_summary_base(session_id: Any) -> dict[str, Any]:
 
 
 def create_session(data: Any) -> str | None:
-    """Create a Firestore session document and return its session ID."""
+    """
+    Create a Firestore session document and return its session ID.
+
+    Args:
+        data (Any): Initial session data.
+
+    Returns:
+        str | None: The created session ID or None.
+    """
     db = _get_firestore_client()
     if db is None:
         return None
@@ -138,12 +209,21 @@ def create_session(data: Any) -> str | None:
         document_ref = db.collection(SESSIONS_COLLECTION).document()
         document_ref.set(session_payload)
         return document_ref.id
-    except Exception as exc:
+    except Exception:
         return None
 
 
 def log_interaction(session_id: Any, data: Any) -> str | None:
-    """Add an interaction document under the given Firestore session."""
+    """
+    Add an interaction document under the given Firestore session.
+
+    Args:
+        session_id (Any): The parent session ID.
+        data (Any): Interaction details.
+
+    Returns:
+        str | None: The created interaction document ID or None.
+    """
     db = _get_firestore_client()
     safe_session_id = _as_string(session_id).strip()
 
@@ -164,12 +244,20 @@ def log_interaction(session_id: Any, data: Any) -> str | None:
         )
         document_ref.set(interaction_payload)
         return document_ref.id
-    except Exception as exc:
+    except Exception:
         return None
 
 
 def get_session_summary(session_id: Any) -> dict[str, Any]:
-    """Return a session summary from Firestore with graceful service fallbacks."""
+    """
+    Return a session summary from Firestore with graceful service fallbacks.
+
+    Args:
+        session_id (Any): The session ID to retrieve.
+
+    Returns:
+        dict[str, Any]: Complete session summary with profile and interactions.
+    """
     safe_session_id = _as_string(session_id).strip()
     summary = _build_summary_base(safe_session_id)
 

@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
@@ -14,6 +16,14 @@ from modules import eligibility, registration, verification, voting
 from services.firebase_service import create_session, get_session_summary, log_interaction
 from services.gemini_service import generate_response_bundle
 
+# Configure structured logging for Cloud Run observability
+# Using a standard format that Cloud Logging can parse as structured data
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger("matdata-sahayak")
 
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:3000,"
@@ -41,7 +51,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        """Attach security-related headers to the response based on the request path."""
+        """
+        Attach security-related headers to the response based on the request path.
+
+        Args:
+            request (Request): Incoming request object.
+            call_next (Callable): Next middleware or route handler.
+
+        Returns:
+            Response: Response with attached security headers.
+        """
         response = await call_next(request)
         path = request.url.path
 
@@ -63,19 +82,30 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # STRICT headers for standard API routes
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
+            # Ensure strictly self-hosted resources for core API routes
             response.headers["Content-Security-Policy"] = "default-src 'self';"
 
         return response
 
 
 def _get_cors_origins() -> list[str]:
-    """Return configured CORS origins for local demo or deployment."""
+    """
+    Return configured CORS origins for local demo or deployment.
+
+    Returns:
+        list[str]: List of allowed origin strings.
+    """
     configured_origins = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
     return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
 
 
 def _get_cors_origin_regex() -> str:
-    """Return CORS origin regex with localhost and optional Cloud Run support."""
+    """
+    Return CORS origin regex with localhost and optional Cloud Run support.
+
+    Returns:
+        str: Regex pattern for CORS validation.
+    """
     return os.getenv(
         "CORS_ALLOW_ORIGIN_REGEX",
         rf"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|{CLOUD_RUN_CORS_ORIGIN_REGEX}",
@@ -97,19 +127,40 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    """Simple health endpoint for Cloud Run startup and health checks."""
+    """
+    Simple health endpoint for Cloud Run startup and health checks.
+
+    Returns:
+        dict[str, str]: Service status.
+    """
     return {"status": "ok"}
 
 
 def _model_to_dict(model: Any) -> dict[str, Any]:
-    """Convert a Pydantic model to a dictionary across Pydantic versions."""
+    """
+    Convert a Pydantic model to a dictionary across Pydantic versions.
+
+    Args:
+        model (Any): Pydantic model instance.
+
+    Returns:
+        dict[str, Any]: Dictionary representation of the model.
+    """
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return model.dict()
 
 
 def _get_guidance_for_stage(stage: str) -> dict[str, list[str]]:
-    """Return module guidance for the current election stage."""
+    """
+    Return module guidance for the current election stage.
+
+    Args:
+        stage (str): Current voter stage.
+
+    Returns:
+        dict[str, list[str]]: Guidance data including next steps and links.
+    """
     guidance_by_stage = {
         "ineligible": eligibility.get_guidance,
         "registration": registration.get_guidance,
@@ -120,7 +171,15 @@ def _get_guidance_for_stage(stage: str) -> dict[str, list[str]]:
 
 
 def _fallback_chat_response(guidance: dict[str, list[str]]) -> str:
-    """Create a simple fallback response from module next steps."""
+    """
+    Create a simple fallback response from module next steps.
+
+    Args:
+        guidance (dict[str, list[str]]): Guidance data.
+
+    Returns:
+        str: Fallback message for the user.
+    """
     next_steps = guidance.get("next_steps", [])
     if not next_steps:
         return "Please follow the official Election Commission of India guidance."
@@ -128,15 +187,31 @@ def _fallback_chat_response(guidance: dict[str, list[str]]) -> str:
 
 
 def _history_to_dicts(history: Sequence[Any]) -> list[dict[str, Any]]:
-    """Normalize bounded chat history into dictionaries for Gemini context."""
-    normalized_history = []
-    for item in history[-MAX_HISTORY_ITEMS:]:
-        normalized_history.append(_model_to_dict(item))
-    return normalized_history
+    """
+    Normalize bounded chat history into dictionaries for Gemini context.
+
+    Args:
+        history (Sequence[Any]): Raw history items.
+
+    Returns:
+        list[dict[str, Any]]: List of dictionary-formatted history items.
+    """
+    # Limits payload size and improves performance
+    # Ensures Gemini context remains focused and token efficient
+    history_window = list(history)[-MAX_HISTORY_ITEMS:]
+    return [_model_to_dict(item) for item in history_window]
 
 
 def _default_follow_up_questions(stage: str) -> list[str]:
-    """Return stable follow-up prompts when Gemini suggestions are unavailable."""
+    """
+    Return stable follow-up prompts when Gemini suggestions are unavailable.
+
+    Args:
+        stage (str): Current voter stage.
+
+    Returns:
+        list[str]: Default follow-up questions.
+    """
     by_stage = {
         "ineligible": [
             "What can I prepare before I turn 18?",
@@ -163,7 +238,16 @@ def _default_follow_up_questions(stage: str) -> list[str]:
 
 
 def _normalize_follow_up_questions(items: Any, stage: str) -> list[str]:
-    """Sanitize follow-up suggestions for the chat response payload."""
+    """
+    Sanitize follow-up suggestions for the chat response payload.
+
+    Args:
+        items (Any): Raw suggestions from Gemini.
+        stage (str): Current voter stage.
+
+    Returns:
+        list[str]: Cleaned list of unique follow-up questions.
+    """
     if not isinstance(items, list):
         return _default_follow_up_questions(stage)
 
@@ -196,8 +280,31 @@ def _normalize_follow_up_questions(items: Any, stage: str) -> list[str]:
 
 @app.post("/api/evaluate", response_model=EvaluateResponse)
 async def evaluate_user(user: UserProfile) -> EvaluateResponse:
-    """Evaluate a user profile, create a session, and return readiness details."""
+    """
+    Evaluate a user profile, create a session, and return readiness details.
+
+    Args:
+        user (UserProfile): User-provided profile data.
+
+    Returns:
+        EvaluateResponse: Calculated stage, score, and next steps.
+    """
+    # Structured log for incoming request
+    logger.info({
+        "event": "evaluate_request",
+        "endpoint": "/api/evaluate",
+        "method": "POST"
+    })
+
     decision = determine_stage(user)
+
+    # Structured log for decision engine output
+    logger.info({
+        "event": "decision_output",
+        "stage": decision["stage"],
+        "score": decision["readiness_score"]
+    })
+
     guidance = _get_guidance_for_stage(decision["stage"])
     session_id = create_session({"user_profile": _model_to_dict(user)})
 
@@ -213,10 +320,26 @@ async def evaluate_user(user: UserProfile) -> EvaluateResponse:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
-    """Generate election guidance and log the interaction when Firebase is available."""
+    """
+    Generate election guidance and log the interaction when Firebase is available.
+
+    Args:
+        request (ChatRequest): Incoming chat request with history and user profile.
+
+    Returns:
+        ChatResponse: AI-generated response and follow-up suggestions.
+    """
     message = request.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    # Structured log for incoming chat request
+    logger.info({
+        "event": "chat_request",
+        "endpoint": "/api/chat",
+        "method": "POST",
+        "message_preview": message[:100]
+    })
 
     decision = determine_stage(request.user)
     guidance = _get_guidance_for_stage(decision["stage"])
@@ -246,6 +369,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
         decision["stage"],
     )
 
+    # Structured log for chat response
+    logger.info({
+        "event": "chat_response",
+        "stage": decision["stage"],
+        "response_preview": response_text[:100]
+    })
+
     if session_id:
         try:
             log_interaction(
@@ -270,6 +400,14 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 @app.get("/api/session/{session_id}/summary", response_model=SessionSummaryResponse)
 async def session_summary(session_id: str) -> SessionSummaryResponse:
-    """Return a Firebase-backed session summary for demo visibility."""
+    """
+    Return a Firebase-backed session summary for demo visibility.
+
+    Args:
+        session_id (str): The unique session ID.
+
+    Returns:
+        SessionSummaryResponse: Full session details from Firestore.
+    """
     summary = get_session_summary(session_id)
     return SessionSummaryResponse(**summary)
