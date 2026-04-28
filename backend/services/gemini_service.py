@@ -20,7 +20,11 @@ _client = None
 
 
 def _get_client() -> Any | None:
-    """Create and cache a Gemini client from the configured environment variable."""
+    """Create and cache a Gemini client from the configured environment variable.
+
+    Returns:
+        Any | None: Initialized Gemini client or None if unavailable.
+    """
     global _client
 
     if _client is not None:
@@ -38,13 +42,27 @@ def _get_client() -> Any | None:
 
 
 def _extract_text(response: Any) -> str:
-    """Extract text safely from a Gemini response object."""
+    """Extract text safely from a Gemini response object.
+
+    Args:
+        response (Any): Gemini response object.
+
+    Returns:
+        str: Normalized response text.
+    """
     text = getattr(response, "text", "")
     return text.strip() if isinstance(text, str) else ""
 
 
 def _format_history(history: Any) -> str:
-    """Format recent conversation history into a readable prompt block."""
+    """Format recent conversation history into a readable prompt block.
+
+    Args:
+        history (Any): Raw conversation history items.
+
+    Returns:
+        str: Prompt-friendly history block.
+    """
     if not isinstance(history, list):
         return "No prior conversation."
 
@@ -61,14 +79,28 @@ def _format_history(history: Any) -> str:
 
 
 def _normalize_items(items: Any) -> list[str]:
-    """Normalize prompt list values into readable strings."""
+    """Normalize prompt list values into readable strings.
+
+    Args:
+        items (Any): Raw list-like values.
+
+    Returns:
+        list[str]: Cleaned list of strings.
+    """
     if not isinstance(items, list):
         return []
     return [str(item).strip() for item in items if str(item).strip()]
 
 
 def _deduplicate_strings(items: list[str]) -> list[str]:
-    """Return values in insertion order without duplicates (case-insensitive)."""
+    """Return values in insertion order without duplicates (case-insensitive).
+
+    Args:
+        items (list[str]): Input strings.
+
+    Returns:
+        list[str]: Deduplicated strings in insertion order.
+    """
     unique_items = []
     seen = set()
 
@@ -83,13 +115,28 @@ def _deduplicate_strings(items: list[str]) -> list[str]:
 
 
 def _format_items(items: Any, empty_message: str) -> str:
-    """Format list-like values as bullet lines for prompt context."""
+    """Format list-like values as bullet lines for prompt context.
+
+    Args:
+        items (Any): Raw list-like values.
+        empty_message (str): Fallback message when list is empty.
+
+    Returns:
+        str: Bullet-formatted list or fallback message.
+    """
     normalized_items = _normalize_items(items)
     return "\n".join(f"- {item}" for item in normalized_items) or f"- {empty_message}"
 
 
 def _build_user_profile_summary(context: Any) -> str:
-    """Build a concise user profile summary for personalized Gemini responses."""
+    """Build a concise user profile summary for personalized Gemini responses.
+
+    Args:
+        context (Any): Request context containing user profile fields.
+
+    Returns:
+        str: Multi-line summary of user details.
+    """
     if not isinstance(context, dict):
         return "No user profile provided."
 
@@ -113,7 +160,14 @@ def _build_user_profile_summary(context: Any) -> str:
 
 
 def _get_intent_guidance(intent: str) -> str:
-    """Return response guidance tailored to the detected intent."""
+    """Return response guidance tailored to the detected intent.
+
+    Args:
+        intent (str): Detected intent label.
+
+    Returns:
+        str: Guidance for response generation.
+    """
     guidance_by_intent = {
         "ELIGIBILITY": (
             "Explain eligibility calmly and clearly. Mention age, citizenship, and readiness without overcomplicating it."
@@ -135,7 +189,15 @@ def _get_intent_guidance(intent: str) -> str:
 
 
 def _fallback_follow_up_questions(stage: str, intent: str) -> list[str]:
-    """Return follow-up questions when Gemini output is unavailable or malformed."""
+    """Return follow-up questions when Gemini output is unavailable or malformed.
+
+    Args:
+        stage (str): Current voter stage.
+        intent (str): Detected intent label.
+
+    Returns:
+        list[str]: Suggested follow-up questions.
+    """
     stage_questions = {
         "ineligible": [
             "What documents should I prepare before I turn 18?",
@@ -196,7 +258,15 @@ def _fallback_follow_up_questions(stage: str, intent: str) -> list[str]:
 
 
 def _sanitize_follow_up_questions(items: Any, defaults: list[str]) -> list[str]:
-    """Normalize follow-up questions and guarantee 2 to 3 usable suggestions."""
+    """Normalize follow-up questions and guarantee 2 to 3 usable suggestions.
+
+    Args:
+        items (Any): Raw follow-up questions.
+        defaults (list[str]): Fallback questions to ensure coverage.
+
+    Returns:
+        list[str]: Cleaned follow-up questions.
+    """
     normalized_items = _normalize_items(items)
     deduplicated = _deduplicate_strings(normalized_items)
 
@@ -222,7 +292,14 @@ def _sanitize_follow_up_questions(items: Any, defaults: list[str]) -> list[str]:
 
 
 def _extract_json_object(text: str) -> dict[str, Any] | None:
-    """Extract and parse the first JSON object from model output."""
+    """Extract and parse the first JSON object from model output.
+
+    Args:
+        text (str): Raw model output text.
+
+    Returns:
+        dict[str, Any] | None: Parsed JSON object, if available.
+    """
     if not isinstance(text, str):
         return None
 
@@ -252,7 +329,14 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
 
 
 def _fallback_response(context: Any) -> str:
-    """Build a concise conversational fallback response from checklist and next steps."""
+    """Build a concise conversational fallback response.
+
+    Args:
+        context (Any): Request context with stage guidance.
+
+    Returns:
+        str: Fallback response text.
+    """
     stage = context.get("stage", "general") if isinstance(context, dict) else "general"
     next_steps = context.get("next_steps", []) if isinstance(context, dict) else []
     links = context.get("links", []) if isinstance(context, dict) else []
@@ -281,7 +365,18 @@ def _build_response_prompt(
     context: Any,
     history: str,
 ) -> str:
-    """Build the Gemini response prompt with personalized election guidance context."""
+    """Build the Gemini response prompt with personalized election guidance context.
+
+    Args:
+        message (str): User message.
+        stage (str): Current voter stage.
+        intent (str): Detected intent label.
+        context (Any): Request context with guidance data.
+        history (str): Formatted conversation history.
+
+    Returns:
+        str: Prompt for the Gemini model.
+    """
     if not isinstance(context, dict):
         context = {}
 
@@ -320,7 +415,14 @@ def _build_response_prompt(
 
 
 def detect_intent(message: str) -> str:
-    """Classify intent locally so response generation stays a single Gemini call."""
+    """Classify intent locally so response generation stays a single Gemini call.
+
+    Args:
+        message (str): User message.
+
+    Returns:
+        str: Intent label.
+    """
     if not isinstance(message, str) or not message.strip():
         return "GENERAL"
 
@@ -375,7 +477,14 @@ def detect_intent(message: str) -> str:
 
 
 def generate_response_bundle(context: Any) -> dict[str, Any]:
-    """Generate reply text and follow-up questions in one Gemini generation call."""
+    """Generate reply text and follow-up questions in one Gemini call.
+
+    Args:
+        context (Any): Request context with guidance and history.
+
+    Returns:
+        dict[str, Any]: Response text and follow-up questions.
+    """
     stage = context.get("stage", "general") if isinstance(context, dict) else "general"
     message = str(context.get("message", "")).strip() if isinstance(context, dict) else ""
     intent = detect_intent(message)
@@ -383,6 +492,7 @@ def generate_response_bundle(context: Any) -> dict[str, Any]:
     fallback_questions = _fallback_follow_up_questions(stage, intent)
 
     client = _get_client()
+    # Fall back to deterministic guidance when Gemini is unavailable.
     if client is None or not isinstance(context, dict):
         return {
             "response": fallback_text,
@@ -440,5 +550,12 @@ def generate_response_bundle(context: Any) -> dict[str, Any]:
 
 
 def generate_response(context: Any) -> str:
-    """Backward-compatible text-only response wrapper."""
+    """Return a text-only response for legacy callers.
+
+    Args:
+        context (Any): Request context with guidance and history.
+
+    Returns:
+        str: Response text.
+    """
     return generate_response_bundle(context).get("response", _fallback_response(context))

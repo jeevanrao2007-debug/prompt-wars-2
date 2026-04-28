@@ -1,5 +1,9 @@
 def get_guidance() -> dict[str, list[str]]:
-    """Return voting-day guidance for an enrolled voter."""
+    """Return voting-day guidance for an enrolled voter.
+
+    Returns:
+        dict[str, list[str]]: Guidance with checklist, next steps, and links.
+    """
     return {
         "checklist": [
             "Check your polling booth details before election day.",

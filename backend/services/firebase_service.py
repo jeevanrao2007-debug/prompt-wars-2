@@ -6,7 +6,8 @@ from typing import Any
 # Firestore structure:
 # sessions/{session_id}
 # └── interactions/{interaction_id}
-# This layered approach ensures clean session isolation and traceability of user interactions.
+# This hierarchical structure keeps session data and interactions organized.
+# System designed to integrate with BigQuery for analytics (future extension).
 
 try:
     import firebase_admin
@@ -27,8 +28,7 @@ _init_lock = Lock()
 
 
 def _get_firestore_client() -> Any | None:
-    """
-    Initialize and return a shared Firestore client from environment configuration.
+    """Initialize and return a shared Firestore client from environment config.
 
     Returns:
         Any | None: Initialized Firestore client or None if unavailable.
@@ -69,8 +69,7 @@ def _get_firestore_client() -> Any | None:
 
 
 def _utc_now() -> datetime:
-    """
-    Return the current UTC timestamp.
+    """Return the current UTC timestamp.
 
     Returns:
         datetime: Current UTC datetime.
@@ -79,8 +78,7 @@ def _utc_now() -> datetime:
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
-    """
-    Return value if it is a dictionary, otherwise return an empty dictionary.
+    """Return a dictionary value or an empty dictionary.
 
     Args:
         value (Any): Input value.
@@ -92,8 +90,7 @@ def _as_dict(value: Any) -> dict[str, Any]:
 
 
 def _as_string(value: Any) -> str:
-    """
-    Return value as a safe string for Firestore writes.
+    """Return a safe string value for Firestore writes.
 
     Args:
         value (Any): Input value.
@@ -107,8 +104,7 @@ def _as_string(value: Any) -> str:
 
 
 def _normalize_user_profile(data: Any) -> dict[str, Any]:
-    """
-    Build a valid user profile payload for a session document.
+    """Build a valid user profile payload for a session document.
 
     Args:
         data (Any): Input data containing user profile details.
@@ -128,8 +124,7 @@ def _normalize_user_profile(data: Any) -> dict[str, Any]:
 
 
 def _normalize_interaction(data: Any) -> dict[str, Any]:
-    """
-    Build a valid interaction payload for an interaction document.
+    """Build a valid interaction payload for an interaction document.
 
     Args:
         data (Any): Input data containing interaction details.
@@ -148,8 +143,7 @@ def _normalize_interaction(data: Any) -> dict[str, Any]:
 
 
 def _to_iso_timestamp(value: Any) -> str | None:
-    """
-    Normalize datetime-like values to ISO strings for API responses.
+    """Normalize datetime-like values to ISO strings for API responses.
 
     Args:
         value (Any): Input value (expected datetime).
@@ -166,8 +160,7 @@ def _to_iso_timestamp(value: Any) -> str | None:
 
 
 def _build_summary_base(session_id: Any) -> dict[str, Any]:
-    """
-    Return the shared shape used by the session summary endpoint.
+    """Return the base shape used by the session summary endpoint.
 
     Args:
         session_id (Any): The ID of the session.
@@ -187,8 +180,7 @@ def _build_summary_base(session_id: Any) -> dict[str, Any]:
 
 
 def create_session(data: Any) -> str | None:
-    """
-    Create a Firestore session document and return its session ID.
+    """Create a Firestore session document and return its session ID.
 
     Args:
         data (Any): Initial session data.
@@ -214,8 +206,7 @@ def create_session(data: Any) -> str | None:
 
 
 def log_interaction(session_id: Any, data: Any) -> str | None:
-    """
-    Add an interaction document under the given Firestore session.
+    """Add an interaction document under the given Firestore session.
 
     Args:
         session_id (Any): The parent session ID.
@@ -249,8 +240,7 @@ def log_interaction(session_id: Any, data: Any) -> str | None:
 
 
 def get_session_summary(session_id: Any) -> dict[str, Any]:
-    """
-    Return a session summary from Firestore with graceful service fallbacks.
+    """Return a session summary from Firestore with graceful service fallbacks.
 
     Args:
         session_id (Any): The session ID to retrieve.
@@ -298,6 +288,7 @@ def get_session_summary(session_id: Any) -> dict[str, Any]:
         interaction_stream = session_ref.collection(INTERACTIONS_COLLECTION).stream()
 
     for index, document in enumerate(interaction_stream):
+        # Cap interactions to keep the summary payload lightweight.
         if index >= 25:
             break
         payload = _as_dict(document.to_dict())

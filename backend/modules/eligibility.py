@@ -1,5 +1,9 @@
 def get_guidance() -> dict[str, list[str]]:
-    """Return eligibility guidance aligned with Election Commission of India basics."""
+    """Return eligibility guidance aligned with Election Commission of India basics.
+
+    Returns:
+        dict[str, list[str]]: Guidance with checklist, next steps, and links.
+    """
     return {
         "checklist": [
             "Be 18 years or older on the qualifying date.",

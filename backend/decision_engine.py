@@ -2,11 +2,10 @@ from typing import Any
 
 
 def determine_stage(user_profile: Any) -> dict[str, Any]:
-    """
-    Evaluate voter readiness based on profile and determine the election stage.
+    """Evaluate voter readiness and determine the election stage.
 
     Args:
-        user_profile (Any): Contains age, registration, and verification status.
+        user_profile (Any): User profile containing age, registration, and verification status.
 
     Returns:
         dict[str, Any]: Stage classification, readiness score, and checklist.
@@ -16,8 +15,9 @@ def determine_stage(user_profile: Any) -> dict[str, Any]:
     registered = user_profile.registered
     verified = user_profile.verified
 
-    # Deterministic logic for stage classification
-    # This ensures legal correctness and explainability
+    # Deterministic rules: explicit legal milestones, no probabilistic inputs.
+    # Stage meaning: ineligible=under 18, registration=not registered,
+    # verification=registered but unverified, ready_to_vote=all milestones met.
     if age < 18:
         stage = "ineligible"
     elif not registered:

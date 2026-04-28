@@ -1,5 +1,9 @@
 def get_guidance() -> dict[str, list[str]]:
-    """Return voter registration guidance for the Form 6 process."""
+    """Return voter registration guidance for the Form 6 process.
+
+    Returns:
+        dict[str, list[str]]: Guidance with checklist, next steps, and links.
+    """
     return {
         "checklist": [
             "Open the new voter registration section on the ECI voter portal.",

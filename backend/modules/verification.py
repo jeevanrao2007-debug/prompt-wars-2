@@ -1,5 +1,9 @@
 def get_guidance() -> dict[str, list[str]]:
-    """Return voter verification and correction guidance."""
+    """Return voter verification and correction guidance.
+
+    Returns:
+        dict[str, list[str]]: Guidance with checklist, next steps, and links.
+    """
     return {
         "checklist": [
             "Search your name in the electoral roll.",
